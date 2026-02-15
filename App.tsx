@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { DashboardStats, Member, Task, TaskStatus, ViewType } from "./types";
 import { INITIAL_MEMBERS, INITIAL_TASKS } from "./constants";
 import MemberModal from "./components/MemberModal";
@@ -11,6 +11,7 @@ import { MembersView } from "./components/view/MembersView";
 import { BoardView } from "./components/view/BoardView";
 import { ListView } from "./components/view/ListView";
 import { MobileNav } from "./components/MobileNav";
+import { supabase } from "./lib/supabase";
 
 const App: React = () => {
 	const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
@@ -33,14 +34,62 @@ const App: React = () => {
 		setIsMemberModalOpen(true);
 	};
 
-	const handleSaveMember = useCallback((member: Member) => {
-		setMembers((prev) => {
-			const exists = prev.find((m) => m.id === member.id);
-			if (exists)
-				return prev.map((m) => (m.id === member.id ? member : m));
-			return [...prev, member];
-		});
-		setEditingMember(undefined);
+	useEffect(() => {
+		const fetchData = async () => {
+			// メンバー取得
+			const { data: membersData } = await supabase
+				.from("members")
+				.select("*");
+			if (membersData) setMembers(membersData);
+
+			// タスク取得
+			const { data: tasksData } = await supabase
+				.from("tasks")
+				.select("*");
+			if (tasksData) setTasks(tasksData);
+		};
+		fetchData();
+	}, []);
+
+	const handleSaveMember = useCallback(async (member: Member) => {
+		// 1. 送信用のオブジェクトを作成
+		const payload: any = {
+			name: member.name,
+			department: member.department,
+			role: member.role,
+			avatar: member.avatar,
+		};
+
+		// 2. IDが「既存のUUID（ハイフンが含まれる長い文字列）」ならIDを含める（更新）
+		//    新規作成時（短いIDや仮のID）は、IDを含めない（作成）
+		if (member.id && member.id.includes("-")) {
+			payload.id = member.id;
+		}
+
+		const { data, error } = await supabase
+			.from("members")
+			.upsert(payload) // IDがあれば更新、なければ新規作成
+			.select();
+
+		if (error) {
+			console.error("❌ Supabase Error:", error.message);
+			return;
+		}
+
+		if (data) {
+			setMembers((prev) => {
+				// DBから返ってきた最新のデータ（本物のUUID付き）を使う
+				const savedMember = data[0];
+				const exists = prev.find((m) => m.id === member.id);
+
+				if (exists) {
+					return prev.map((m) =>
+						m.id === member.id ? savedMember : m,
+					);
+				}
+				return [...prev, savedMember];
+			});
+		}
 	}, []);
 
 	// タスク管理ハンドラー

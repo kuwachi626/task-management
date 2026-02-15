@@ -1,14 +1,6 @@
 import React from "react";
 import { Avatar } from "../Avatar";
-
-// 必要に応じて既存の型定義からインポートしてください
-interface Member {
-	id: string;
-	name: string;
-	role: string;
-	affiliation: string;
-	avatar: string;
-}
+import { Member } from "@/types";
 
 interface Task {
 	assignedTo: string;
@@ -86,7 +78,7 @@ const MemberCard = ({
 					{member.name}
 				</h3>
 				<p className="text-xs text-slate-400 font-bold mb-6 tracking-wide uppercase">
-					{member.role} ・ {member.affiliation}
+					{member.role} ・{member.department}
 				</p>
 
 				<div className="space-y-4">

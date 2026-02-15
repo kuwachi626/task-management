@@ -7,10 +7,10 @@ export type ViewType = "DASHBOARD" | "BOARD" | "LIST" | "MEMBERS";
 export interface Member {
 	id: string;
 	name: string;
-	affiliation: string; // 所属
-	role: string; // 担当範囲・役割
+	department: string;
+	role: string;
 	avatar: string;
-	email: string;
+	created_at: string;
 }
 
 export interface Task {
